@@ -1,0 +1,64 @@
+Perfect! Let’s now explain **what happened** — simply and clearly:
+
+---
+
+### 🛠 Your Setup
+
+- In the **Build Pipeline**:
+  - You created Terraform `.tf` files.
+  - You **zipped** them and **published** them as a **build artifact** into this folder:  
+    ➔ `/home/vsts/work/1/a`  
+    (which is called `$(Build.ArtifactStagingDirectory)`).
+
+---
+
+- In the **Release Pipeline**:
+  - Azure DevOps automatically **downloads** the artifacts into:  
+    ➔ `/home/vsts/work/r1/a/drop`  
+    (this is `$(System.DefaultWorkingDirectory)/drop`).
+
+---
+
+### 🚨 Your Issue
+- You tried to **extract** or **run Terraform commands** assuming files were still in `/1/a`.
+- But actually, in **Release**, files were in `/r1/a/drop/`.
+- That's why when you tried to `extract` or `terraform apply`, it gave "file not found" errors (`ENOENT` error).
+
+---
+  
+### 🔥 Root Cause
+- **Mismatch of directories** between Build and Release pipeline.
+- **Build** uses `/1/`, **Release** uses `/r1/` — they are different pipeline agents.
+
+---
+  
+### ✅ How We Solved It
+- **Always work inside Release pipeline's** working folder:  
+  `$(System.DefaultWorkingDirectory)/drop/`
+- **Extract** the files properly into a known subfolder (like `/drop/extracted`).
+- **Run Terraform Init and Apply** **inside that extracted folder**.
+
+---
+  
+### 🎯 Next Time, Remember This Simple Rule:
+
+| Step | In Build | In Release |
+|:----|:----|:----|
+| Artifact Created | `/home/vsts/work/1/a` (`$(Build.ArtifactStagingDirectory)`) | |
+| Artifact Downloaded | | `/home/vsts/work/r1/a/drop` (`$(System.DefaultWorkingDirectory)/drop`) |
+| Extraction Path | | Always into `$(System.DefaultWorkingDirectory)/drop/extracted` |
+| Terraform Directory | | Use `$(System.DefaultWorkingDirectory)/drop/extracted` |
+
+---
+
+### 🧠 **Key Points for Future**
+
+- **In Build:** Artifact creation path = `$(Build.ArtifactStagingDirectory)`
+- **In Release:** Artifact download path = `$(System.DefaultWorkingDirectory)/drop`
+- **In Release:** Extract files carefully inside a subfolder.
+- **Terraform Init/Apply:** Run inside extracted subfolder.
+
+---
+
+Would you like a **one-page cheat sheet** also for this process for future reference? 📄  
+It'll be super quick to save for your projects! 🚀
